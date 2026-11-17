@@ -3,7 +3,6 @@ import type { Bot } from "@rakazo/contracts";
 import { Button, Popover, PopoverContent, PopoverTrigger } from "@rakazo/ui-web";
 import { Bell, PanelLeftClose, PanelLeftOpen, Plus, Search } from "lucide-react";
 import { IconTooltip } from "../../components/IconTooltip";
-import { ProductBrand } from "../../components/ProductBrand";
 import { desktopBridge } from "../../lib/desktop";
 import type { Panel } from "../../lib/right-panel-state";
 import { WindowChrome } from "../WindowChrome";
@@ -47,13 +46,10 @@ export function SidebarHeader({
   const labelSide = mini ? "inline-end" : undefined;
   return (
     <div
-      className={`app-drag flex flex-col ${mini ? `items-center gap-2 px-0 pb-2 ${hasWindowChrome ? "pt-4" : "pt-2"}` : "gap-1 pb-3 pt-3"}`}
+      className={`app-drag flex items-center ${mini ? `flex-col gap-2 px-0 pb-2 ${hasWindowChrome ? "pt-4" : "pt-2"}` : "justify-between px-[18px] pb-3 pt-4"}`}
     >
       {!mini || hasWindowChrome ? <WindowChrome /> : null}
-      <ProductBrand compact={mini} />
-      <div
-        className={`relative flex items-center ${mini ? "flex-col gap-0.5" : "justify-between gap-1 px-[18px]"}`}
-      >
+      <div className={`relative flex items-center ${mini ? "flex-col gap-0.5" : "gap-1"}`}>
         {onSearch ? (
           <IconTooltip label={t`Search`} side={labelSide}>
             <Button

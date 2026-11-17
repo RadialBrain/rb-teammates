@@ -1,14 +1,64 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none" role="img" aria-label="Teammate">
-  <!-- Grok-like: hard disc, crisp companion, high contrast. Indigo seed = RadialBrain. -->
-  <circle cx="64" cy="64" r="64" fill="#0B0B0F"/>
-  <!-- Squircle body — geometric, not organic blob -->
+  <!-- Flat vector of RadialBrain Teammate: helmet, visor eyes, radial halo -->
+  <defs>
+    <linearGradient id="helm" x1="28" y1="24" x2="100" y2="108" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7B5CFF"/>
+      <stop offset="0.55" stop-color="#5B3FD4"/>
+      <stop offset="1" stop-color="#3A278F"/>
+    </linearGradient>
+    <linearGradient id="chest" x1="40" y1="96" x2="88" y2="124" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6A4AE8"/>
+      <stop offset="1" stop-color="#2F1F78"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Radial halo (9 ticks) — brand motif -->
+  <g stroke-linecap="round">
+    <path d="M28 34 L22 28" stroke="#2EE6FF" stroke-width="5"/>
+    <path d="M38 24 L34 16" stroke="#5AD8FF" stroke-width="5"/>
+    <path d="M51 18 L49 9" stroke="#8BB0FF" stroke-width="5"/>
+    <path d="M64 16 L64 6" stroke="#C084FC" stroke-width="5"/>
+    <path d="M77 18 L79 9" stroke="#E879F9" stroke-width="5"/>
+    <path d="M90 24 L94 16" stroke="#F0ABFC" stroke-width="5"/>
+    <path d="M100 34 L106 28" stroke="#2EE6FF" stroke-width="5"/>
+    <path d="M22 48 L14 46" stroke="#22D3EE" stroke-width="5"/>
+    <path d="M106 48 L114 46" stroke="#22D3EE" stroke-width="5"/>
+  </g>
+
+  <!-- Shoulders / chest -->
   <path
-    fill="#F5F5F7"
-    d="M40 38c0-8.837 7.163-16 16-16h16c8.837 0 16 7.163 16 16v36c0 12.15-9.85 22-22 22h-4c-12.15 0-22-9.85-22-22V38z"
+    fill="url(#chest)"
+    d="M34 104c6-10 16-16 30-16s24 6 30 16v10c-8 6-18 10-30 10s-22-4-30-10v-10z"
   />
-  <!-- Eyes: tall slots, slightly asymmetric for life -->
-  <rect x="50" y="52" width="8" height="18" rx="4" fill="#0B0B0F"/>
-  <rect x="70" y="50" width="8" height="20" rx="4" fill="#0B0B0F"/>
-  <!-- RadialBrain accent — single sharp node -->
-  <circle cx="64" cy="96" r="4" fill="#6E5AFF"/>
+  <circle cx="40" cy="108" r="3.2" fill="#2EE6FF"/>
+  <circle cx="88" cy="108" r="3.2" fill="#2EE6FF"/>
+
+  <!-- Ear discs -->
+  <circle cx="30" cy="70" r="11" fill="#4C35B8"/>
+  <circle cx="30" cy="70" r="6.5" fill="#2A1B6E"/>
+  <circle cx="98" cy="70" r="11" fill="#4C35B8"/>
+  <circle cx="98" cy="70" r="6.5" fill="#2A1B6E"/>
+
+  <!-- Helmet -->
+  <path
+    fill="url(#helm)"
+    d="M32 72c0-22 14.5-40 32-40s32 18 32 40c0 8-2.5 14-7 19-6 7-14 11-25 11s-19-4-25-11c-4.5-5-7-11-7-19z"
+  />
+  <!-- Helmet highlight (flat, not 3D gloss) -->
+  <path
+    fill="#A78BFA"
+    fill-opacity="0.28"
+    d="M44 42c8-8 16-11 28-10 2 8-2 16-10 22-7 5-15 6-22 3 1-5 2-10 4-15z"
+  />
+
+  <!-- Visor -->
+  <path
+    fill="#0B0B12"
+    d="M42 62c2-10 10-17 22-17s20 7 22 17c1 6-1 12-5 15-5 4-11 6-17 6s-12-2-17-6c-4-3-6-9-5-15z"
+  />
+  <!-- Cyan eyes -->
+  <ellipse cx="54" cy="68" rx="5.5" ry="7" fill="#2EE6FF"/>
+  <ellipse cx="74" cy="68" rx="5.5" ry="7" fill="#2EE6FF"/>
+  <ellipse cx="52.8" cy="65.5" rx="1.6" ry="2.2" fill="#E0FDFF"/>
+  <ellipse cx="72.8" cy="65.5" rx="1.6" ry="2.2" fill="#E0FDFF"/>
 </svg>
