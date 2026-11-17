@@ -1,4 +1,4 @@
-/** Product chrome: RadialBrain mark + Teammate. Lives above OOTB sidebar tools. */
+/** Product chrome: RadialBrain mark + Teammate. Inline with sidebar tools. */
 export function ProductBrand({ compact = false }: { compact?: boolean }) {
   if (compact) {
     return (
@@ -14,7 +14,7 @@ export function ProductBrand({ compact = false }: { compact?: boolean }) {
     );
   }
   return (
-    <div className="app-no-drag flex w-full items-center justify-center gap-2.5 px-3 pb-2 pt-3">
+    <div className="app-no-drag flex min-w-0 items-center gap-2">
       <img
         src="/brand/radialbrain-mark.png"
         alt=""
