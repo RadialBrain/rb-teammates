@@ -46,10 +46,10 @@ export function SidebarHeader({
   // In the icon rail the actions stack, so a label above or below covers its neighbour.
   const labelSide = mini ? "inline-end" : undefined;
   return (
-    <div className={`flex flex-col ${mini ? "items-center" : ""}`}>
+    <div className="flex flex-col items-center">
       <ProductBrand compact={mini} />
       <div
-        className={`app-drag flex items-center ${mini ? `flex-col gap-2 px-0 pb-2 ${hasWindowChrome ? "pt-2" : "pt-1"}` : "justify-between px-[18px] pb-3 pt-1"}`}
+        className={`app-drag flex w-full items-center ${mini ? `flex-col gap-2 px-0 pb-2 ${hasWindowChrome ? "pt-2" : "pt-1"}` : "justify-center px-3 pb-3 pt-1"}`}
       >
       {!mini || hasWindowChrome ? <WindowChrome /> : null}
       <div className={`relative flex items-center ${mini ? "flex-col gap-0.5" : "gap-1"}`}>

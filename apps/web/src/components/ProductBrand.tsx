@@ -14,7 +14,7 @@ export function ProductBrand({ compact = false }: { compact?: boolean }) {
     );
   }
   return (
-    <div className="app-no-drag flex items-center gap-2.5 px-[18px] pb-2 pt-3">
+    <div className="app-no-drag flex w-full items-center justify-center gap-2.5 px-3 pb-2 pt-3">
       <img
         src="/brand/radialbrain-mark.png"
         alt=""
