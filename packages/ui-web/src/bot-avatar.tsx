@@ -49,9 +49,12 @@ export function parseBotAvatar(
   imageUrl?: string;
 } {
   if (!rawColor) return { color: "#F97316", isImage: false };
-  // Only data: image URLs are rendered. Arbitrary http(s)/blob values in `color`
-  // must not become <img src> (SSRF / tracking when other members view the bot).
-  if (rawColor.startsWith("data:image/")) {
+  // Only data: images and same-origin /brand/* assets are rendered. Arbitrary
+  // http(s)/blob values in `color` must not become <img src> (SSRF / tracking).
+  if (
+    rawColor.startsWith("data:image/") ||
+    /^\/brand\/[A-Za-z0-9._-]+\.(?:png|svg|webp|jpe?g)$/.test(rawColor)
+  ) {
     return { color: "#F97316", isImage: true, imageUrl: rawColor };
   }
   if (rawColor.includes("::shape_")) {
@@ -114,7 +117,15 @@ export const BotAvatar = memo(function BotAvatar({
         style={{ width: size, height: size }}
       >
         <div className="rakazo-bot-avatar-picture relative flex h-full w-full items-center justify-center overflow-hidden rounded-full border border-border bg-secondary">
-          <img src={parsed.imageUrl} alt="" className="h-full w-full object-cover" />
+          <img
+            src={parsed.imageUrl}
+            alt=""
+            className={
+              parsed.imageUrl.startsWith("/brand/")
+                ? "h-full w-full object-contain p-[8%]"
+                : "h-full w-full object-cover"
+            }
+          />
         </div>
         {isWorking ? (
           <svg

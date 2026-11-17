@@ -2,8 +2,8 @@ import { Trans } from "@lingui/react/macro";
 import { Button } from "@rakazo/ui-web";
 import { rpc } from "../../lib/rpc";
 
-const FIRST_BOT_NAME = "Teammate";
-const FIRST_BOT_COLOR = "#6E5AFF";
+const FIRST_BOT_NAME = "Aide";
+const FIRST_BOT_COLOR = "/brand/bot-avatar.svg";
 const FIRST_BOT_SPAWN_KEY = "onboarding:first";
 const FIRST_BOT_LOCK = "rakazo:onboarding-first-bot";
 
@@ -16,7 +16,9 @@ function findFirstBot(
   const bySpawnKey = bots.find((bot) => bot.spawnKey === FIRST_BOT_SPAWN_KEY);
   if (bySpawnKey) return { id: bySpawnKey.id };
   // Legacy first-run Chief created before spawnKey was set.
-  const byName = bots.find((bot) => bot.name === FIRST_BOT_NAME || bot.name === "Chief");
+  const byName = bots.find(
+    (bot) => bot.name === FIRST_BOT_NAME || bot.name === "Chief" || bot.name === "Teammate",
+  );
   return byName ? { id: byName.id } : undefined;
 }
 

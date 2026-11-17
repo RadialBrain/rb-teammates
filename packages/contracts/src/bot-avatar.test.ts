@@ -27,6 +27,12 @@ describe("bot avatar values", () => {
   });
 
   it("does not treat remote URLs as images", () => {
+    expect(parseBotAvatarValue("/brand/bot-avatar.svg")).toEqual({
+      kind: "image",
+      imageUrl: "/brand/bot-avatar.svg",
+    });
+    expect(isBotAvatarValue("/brand/bot-avatar.svg")).toBe(true);
+    expect(isBotAvatarValue("/evil/x.png")).toBe(false);
     expect(parseBotAvatarValue("https://evil.example/track.png")).toEqual({
       kind: "other",
       raw: "https://evil.example/track.png",

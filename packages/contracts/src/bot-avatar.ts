@@ -97,6 +97,8 @@ export const BOT_AVATAR_VALUE_MAX_LENGTH = 200_000;
 const HEX_COLOR = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 const SHAPE_SUFFIX = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})::shape_\d+$/;
 const DATA_IMAGE = /^data:image\/(?:png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/;
+/** Same-origin brand assets only (RadialBrain Teammates white-label). */
+const BRAND_IMAGE = /^\/brand\/[A-Za-z0-9._-]+\.(?:png|svg|webp|jpe?g)$/;
 
 export type ParsedBotAvatar =
   | { kind: "image"; imageUrl: string }
@@ -105,7 +107,7 @@ export type ParsedBotAvatar =
   | { kind: "other"; raw: string };
 
 export function parseBotAvatarValue(raw: string): ParsedBotAvatar {
-  if (raw.startsWith("data:image/")) {
+  if (raw.startsWith("data:image/") || BRAND_IMAGE.test(raw)) {
     return { kind: "image", imageUrl: raw };
   }
   if (raw.includes("::shape_")) {
@@ -120,10 +122,10 @@ export function parseBotAvatarValue(raw: string): ParsedBotAvatar {
   return { kind: "other", raw };
 }
 
-/** True for values we persist on `bots.color` (hex, encoded shape, or data image). */
+/** True for values we persist on `bots.color` (hex, encoded shape, data image, or /brand asset). */
 export function isBotAvatarValue(raw: string): boolean {
   if (!raw || raw.length > BOT_AVATAR_VALUE_MAX_LENGTH) return false;
-  return HEX_COLOR.test(raw) || SHAPE_SUFFIX.test(raw) || DATA_IMAGE.test(raw);
+  return HEX_COLOR.test(raw) || SHAPE_SUFFIX.test(raw) || DATA_IMAGE.test(raw) || BRAND_IMAGE.test(raw);
 }
 
 export const BotAvatarValueSchema = z
