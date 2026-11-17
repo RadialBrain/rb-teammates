@@ -116,15 +116,18 @@ export const BotAvatar = memo(function BotAvatar({
         data-working={isWorking}
         style={{ width: size, height: size }}
       >
-        <div className="rakazo-bot-avatar-picture relative flex h-full w-full items-center justify-center overflow-hidden rounded-full border border-border bg-secondary">
+        <div
+          className={
+            parsed.imageUrl.startsWith("/brand/") || parsed.imageUrl.startsWith("data:image/svg")
+              ? "rakazo-bot-avatar-picture relative flex h-full w-full items-center justify-center overflow-hidden rounded-full"
+              : "rakazo-bot-avatar-picture relative flex h-full w-full items-center justify-center overflow-hidden rounded-full border border-border bg-secondary"
+          }
+        >
           <img
             src={parsed.imageUrl}
             alt=""
-            className={
-              parsed.imageUrl.startsWith("/brand/")
-                ? "h-full w-full object-contain p-[8%]"
-                : "h-full w-full object-cover"
-            }
+            className="h-full w-full object-cover"
+            draggable={false}
           />
         </div>
         {isWorking ? (
