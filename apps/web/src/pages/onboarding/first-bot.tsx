@@ -3,7 +3,7 @@ import { Button } from "@rakazo/ui-web";
 import { rpc } from "../../lib/rpc";
 
 const FIRST_BOT_NAME = "Teammate";
-const FIRST_BOT_COLOR = "/brand/bot-avatar.svg";
+const FIRST_BOT_COLOR = "#6E5AFF";
 const FIRST_BOT_SPAWN_KEY = "onboarding:first";
 const FIRST_BOT_LOCK = "rakazo:onboarding-first-bot";
 

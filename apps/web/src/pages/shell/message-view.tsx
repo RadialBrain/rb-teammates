@@ -213,6 +213,7 @@ export const MessageView = memo(function MessageView({
             color={speakerBot?.color ?? FALLBACK_BOT_COLOR}
             avatarSet={speakerBot?.avatarSet}
             identity={message.botId}
+            label={speakerName}
             size={22}
           />
           {speakerName}
@@ -727,7 +728,13 @@ function BotMention({
       className="-mx-1 inline-flex items-baseline gap-1.5 rounded-md px-1 transition-colors hover:bg-accent"
     >
       <span className="self-center">
-        <BotAvatar avatarSet={avatarSet} color={color} identity={block.botId} size={18} />
+        <BotAvatar
+          avatarSet={avatarSet}
+          color={color}
+          identity={block.botId}
+          label={name}
+          size={18}
+        />
       </span>
       {name}
     </button>

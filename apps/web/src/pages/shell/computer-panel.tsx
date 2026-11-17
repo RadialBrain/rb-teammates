@@ -97,6 +97,7 @@ function ComputerPreview({
         avatarSet={bot.avatarSet}
         color={bot.color}
         identity={bot.id}
+        label={bot.name}
         size={28}
         className={asleep ? "opacity-50 grayscale" : undefined}
       />

@@ -3,6 +3,7 @@ import type { Bot } from "@rakazo/contracts";
 import { Button, Popover, PopoverContent, PopoverTrigger } from "@rakazo/ui-web";
 import { Bell, PanelLeftClose, PanelLeftOpen, Plus, Search } from "lucide-react";
 import { IconTooltip } from "../../components/IconTooltip";
+import { ProductBrand } from "../../components/ProductBrand";
 import { desktopBridge } from "../../lib/desktop";
 import type { Panel } from "../../lib/right-panel-state";
 import { WindowChrome } from "../WindowChrome";
@@ -45,9 +46,11 @@ export function SidebarHeader({
   // In the icon rail the actions stack, so a label above or below covers its neighbour.
   const labelSide = mini ? "inline-end" : undefined;
   return (
-    <div
-      className={`app-drag flex items-center ${mini ? `flex-col gap-2 px-0 pb-2 ${hasWindowChrome ? "pt-4" : "pt-2"}` : "justify-between px-[18px] pb-3 pt-4"}`}
-    >
+    <div className={`flex flex-col ${mini ? "items-center" : ""}`}>
+      <ProductBrand compact={mini} />
+      <div
+        className={`app-drag flex items-center ${mini ? `flex-col gap-2 px-0 pb-2 ${hasWindowChrome ? "pt-2" : "pt-1"}` : "justify-between px-[18px] pb-3 pt-1"}`}
+      >
       {!mini || hasWindowChrome ? <WindowChrome /> : null}
       <div className={`relative flex items-center ${mini ? "flex-col gap-0.5" : "gap-1"}`}>
         {onSearch ? (
@@ -148,6 +151,7 @@ export function SidebarHeader({
             </PopoverContent>
           ) : null}
         </Popover>
+      </div>
       </div>
     </div>
   );

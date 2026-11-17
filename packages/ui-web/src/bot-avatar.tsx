@@ -86,6 +86,8 @@ export interface BotAvatarProps {
   size?: number;
   status?: string;
   identity?: string;
+  /** Display name — first letter used for flat letter avatars (RadialBrain Teammates). */
+  label?: string;
   className?: string;
 }
 
@@ -96,6 +98,7 @@ export const BotAvatar = memo(function BotAvatar({
   size = 36,
   status,
   identity = "",
+  label,
   className,
 }: BotAvatarProps) {
   const id = useId().replace(/[^a-zA-Z0-9-_]/g, "");
@@ -109,6 +112,19 @@ export const BotAvatar = memo(function BotAvatar({
     [effectiveId, parsed.color],
   );
 
+  // RadialBrain Teammates: flat letter on solid color — no embossed mascots.
+  if (avatarSet !== "rakazo") {
+    return (
+      <FlatLetterAvatar
+        color={colorDef.hex}
+        label={label || identity}
+        size={size}
+        isWorking={isWorking}
+        className={className}
+      />
+    );
+  }
+
   if (parsed.isImage && parsed.imageUrl) {
     return (
       <div
@@ -116,13 +132,7 @@ export const BotAvatar = memo(function BotAvatar({
         data-working={isWorking}
         style={{ width: size, height: size }}
       >
-        <div
-          className={
-            parsed.imageUrl.startsWith("/brand/") || parsed.imageUrl.startsWith("data:image/svg")
-              ? "rakazo-bot-avatar-picture relative flex h-full w-full items-center justify-center overflow-hidden rounded-full"
-              : "rakazo-bot-avatar-picture relative flex h-full w-full items-center justify-center overflow-hidden rounded-full border border-border bg-secondary"
-          }
-        >
+        <div className="rakazo-bot-avatar-picture relative flex h-full w-full items-center justify-center overflow-hidden rounded-full border border-border bg-secondary">
           <img
             src={parsed.imageUrl}
             alt=""
@@ -260,6 +270,53 @@ function LiveLogoAvatar({
 }: ComponentProps<typeof LogoAvatar> & { status?: string }) {
   const activity = useBotAvatarActivity(props.identity ?? "", status);
   return <LogoAvatar {...props} activity={activity} />;
+}
+
+function avatarLetter(label: string): string {
+  const trimmed = label.trim();
+  const match = trimmed.match(/[\p{L}\p{N}]/u);
+  return (match?.[0] ?? "T").toUpperCase();
+}
+
+function FlatLetterAvatar({
+  color,
+  label,
+  size,
+  isWorking,
+  className,
+}: {
+  color: string;
+  label: string;
+  size: number;
+  isWorking: boolean;
+  className?: string;
+}) {
+  const letter = avatarLetter(label);
+  const tone = botEyeTone(color);
+  const fg = tone === "light" ? "#0B0B0F" : "#FFFFFF";
+  return (
+    <div
+      className={cn(
+        "rakazo-bot-avatar relative inline-flex shrink-0 select-none items-center justify-center rounded-full",
+        className,
+      )}
+      data-working={isWorking}
+      style={{
+        width: size,
+        height: size,
+        backgroundColor: color,
+        color: fg,
+        fontSize: Math.max(11, Math.round(size * 0.42)),
+        fontWeight: 650,
+        letterSpacing: "-0.04em",
+        lineHeight: 1,
+        boxShadow: isWorking ? `0 0 0 2px color-mix(in srgb, ${color} 35%, transparent)` : undefined,
+      }}
+      aria-hidden="true"
+    >
+      {letter}
+    </div>
+  );
 }
 
 function OrganicAvatar({

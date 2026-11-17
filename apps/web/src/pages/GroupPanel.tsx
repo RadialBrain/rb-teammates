@@ -113,6 +113,7 @@ function MemberPicker({
                   avatarSet={bot.avatarSet}
                   color={bot.color}
                   identity={bot.id}
+                  label={bot.name}
                   size={32}
                   status={bot.status}
                 />

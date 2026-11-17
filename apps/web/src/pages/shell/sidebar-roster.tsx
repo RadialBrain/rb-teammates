@@ -328,6 +328,7 @@ export function SidebarRoster({
                       avatarSet={item.chat.avatarSet}
                       color={item.chat.color}
                       identity={item.chat.id}
+                      label={item.chat.name}
                       size={mini ? 40 : compact ? 28 : 38}
                       status={item.chat.status}
                     />
@@ -567,6 +568,7 @@ export function SidebarRoster({
                                   avatarSet={item.chat.avatarSet}
                                   color={item.chat.color}
                                   identity={item.chat.id}
+                                  label={item.chat.name}
                                   size={18}
                                   status={item.chat.status}
                                 />
