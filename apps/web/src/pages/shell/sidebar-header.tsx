@@ -161,10 +161,10 @@ export function SidebarHeader({
   }
 
   return (
-    <div className="app-drag flex w-full items-center gap-2 px-3 pb-3 pt-3">
-      <WindowChrome />
+    <div className="app-drag flex w-full items-center gap-1.5 pl-3 pr-2 pb-3 pt-3">
+      {hasWindowChrome ? <WindowChrome /> : null}
       <ProductBrand />
-      <div className="ml-auto">{tools}</div>
+      <div className="ml-auto shrink-0">{tools}</div>
     </div>
   );
 }
