@@ -45,7 +45,8 @@ export function CreateBotDialog({
 }) {
   const { t } = useLingui();
   const nameRef = useRef<HTMLInputElement>(null);
-  const [name, setName] = useState("");
+  // RadialBrain default for every additional bot; first onboarding bot is Chief.
+  const [name, setName] = useState("Teammate");
   const [look, setLook] = useState(newBotLook);
   const identity = newBotPreviewIdentity(avatarSet, look);
   // Creating the bot closes this dialog, so a success keeps it held.
