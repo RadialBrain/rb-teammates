@@ -221,4 +221,27 @@ describe("BotAvatar", () => {
     expect(html).toContain(`fill="${fallback.hex}"`);
     expect(html).not.toContain("#zzzzzz");
   });
+
+  it("flat letter avatars coerce non-string labels instead of throwing", () => {
+    expect(() =>
+      renderToString(
+        <BotAvatar
+          color="#6E5AFF"
+          avatarSet="organic"
+          // Runtime API / partial DTOs can hand us non-strings; letter avatar must not crash.
+          label={123 as unknown as string}
+          identity="bot_1"
+        />,
+      ),
+    ).not.toThrow();
+    const html = renderToString(
+      <BotAvatar
+        color="#6E5AFF"
+        avatarSet="organic"
+        label={null as unknown as string}
+        identity="chief"
+      />,
+    );
+    expect(html).toContain("C");
+  });
 });

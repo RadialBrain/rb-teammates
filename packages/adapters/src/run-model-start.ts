@@ -15,6 +15,7 @@ import {
   modelCreditBillingEnabled,
   resolveConnectedModelKey,
   resolveModelKey,
+  runModelCredentialScope,
 } from "./run-model.js";
 
 /** The run's backup models, loaded once, and the first of them that starts. */
@@ -93,8 +94,11 @@ export async function startRunModel(
   backups: ReturnType<typeof runModelBackups>,
   registerSecrets: (values: string[]) => void,
 ) {
+  const credentials = await runModelCredentialScope(deps.prisma, run);
+  const credentialScope = { userId: credentials.userId, spaceId: credentials.spaceId };
   const modelAccessDenied = async () =>
-    (await modelCreditBillingEnabled(deps)) && !(await memberHasModelAccess(deps.prisma, run));
+    (await modelCreditBillingEnabled(deps)) &&
+    !(await memberHasModelAccess(deps.prisma, credentialScope));
   let start: Awaited<ReturnType<typeof backups.startOnBackup>>;
   let primaryFailure = { message: MISSING_MODEL_RUN_ERROR, accountFailure: true };
   let retryPrimary: unknown;
@@ -121,12 +125,16 @@ export async function startRunModel(
             }
           : await resolveModelKey(
               deps,
-              run.userId,
-              run.spaceId,
+              credentialScope.userId,
+              credentialScope.spaceId,
               selected.credential,
               selected.provider,
               selected.id,
               registerSecrets,
+              {
+                forbidDeploymentFallback: credentials.forbidDeploymentFallback,
+                requireStoredSecret: credentials.forbidDeploymentFallback,
+              },
             ),
       };
     } catch (error) {

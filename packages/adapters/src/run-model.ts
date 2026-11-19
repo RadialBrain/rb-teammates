@@ -7,6 +7,7 @@ import type {
 } from "@rakazo/adapter-kit";
 import { OPENAI_COMPATIBLE_PROVIDER_ID } from "@rakazo/contracts";
 import { MISSING_MODEL_RUN_ERROR } from "@rakazo/core";
+import { resolveRunModelUserId } from "@rakazo/db";
 import {
   CLOUDFLARE_AI_GATEWAY_CONFIG_MESSAGE,
   CLOUDFLARE_WORKERS_AI_PROVIDER_ID,
@@ -45,6 +46,22 @@ import { assertAllowedOpenAiCompatibleUrl } from "./openai-compatible-url.js";
 import { codexLiveModel } from "./pi-codex-catalog.js";
 import { LOCAL_PROVIDER_ID } from "./pi-local-provider.js";
 import { CHATGPT_OAUTH_PROVIDER, isRetiredModelCredentialError } from "./pi-oauth.js";
+
+/**
+ * Whose stored model connection a run uses. Guests borrow the space owner's keys and
+ * never fall through to a deployment env key.
+ */
+export async function runModelCredentialScope(
+  prisma: Parameters<typeof resolveRunModelUserId>[0],
+  scope: { userId: string; spaceId: string },
+): Promise<{ userId: string; spaceId: string; forbidDeploymentFallback: boolean }> {
+  const userId = await resolveRunModelUserId(prisma, scope);
+  return {
+    userId,
+    spaceId: scope.spaceId,
+    forbidDeploymentFallback: userId !== scope.userId,
+  };
+}
 
 export function runtimeFallbackModel(runtime: AgentRuntime) {
   return runtime.describe().capabilities.scripted ? { provider: "scripted", id: "scripted" } : null;
@@ -152,9 +169,15 @@ export async function modelCreditBillingEnabled(
 
 export async function resolveModelKey(...args: Parameters<typeof resolveModelKeyMaterial>) {
   const [deps, userId, spaceId, , provider] = args;
+  const forbidDeploymentFallback = args[7]?.forbidDeploymentFallback === true;
   const billingEnabled = await modelCreditBillingEnabled(deps);
   const scope = { userId, spaceId };
-  if (billingEnabled && (await hasHostedModelCredits(deps.prisma, scope, provider))) {
+  // Guests never spend deployment/hosted credits — only the space owner's stored key.
+  if (
+    !forbidDeploymentFallback &&
+    billingEnabled &&
+    (await hasHostedModelCredits(deps.prisma, scope, provider))
+  ) {
     args[3] = null;
     // Funded managed backups use deployment credentials just like the primary.
     args[7] = { ...args[7], requireStoredSecret: false };
@@ -165,20 +188,25 @@ export async function resolveModelKey(...args: Parameters<typeof resolveModelKey
   // Local and compatible endpoints can intentionally be keyless. Host auth is
   // allowed only for the deployment provider that explicitly opted into it.
   const keyless =
-    provider === LOCAL_PROVIDER_ID ||
-    (provider === OPENAI_COMPATIBLE_PROVIDER_ID && Boolean(material.baseUrl)) ||
-    (provider === "scripted" && deps.runtime?.describe().capabilities.scripted) ||
-    (!credential && deployment.provider === provider && deployment.hostCredentials);
+    !forbidDeploymentFallback &&
+    (provider === LOCAL_PROVIDER_ID ||
+      (provider === OPENAI_COMPATIBLE_PROVIDER_ID && Boolean(material.baseUrl)) ||
+      (provider === "scripted" && deps.runtime?.describe().capabilities.scripted) ||
+      (!credential && deployment.provider === provider && deployment.hostCredentials));
   // Match Pi's OpenRouter fallback only when no explicit key overrides it.
   const runtimeKey =
-    material.apiKey === undefined && (provider === "openrouter" || provider === "scripted")
+    !forbidDeploymentFallback &&
+    material.apiKey === undefined &&
+    (provider === "openrouter" || provider === "scripted")
       ? process.env.OPENROUTER_API_KEY
       : undefined;
   if (!material.apiKey?.trim() && !runtimeKey?.trim() && !keyless) {
     throw new UnavailableModelForAuthError(MISSING_MODEL_RUN_ERROR);
   }
   const callObserver =
-    !credential && billingEnabled ? await hostedModelCreditObserver(deps.prisma, scope) : undefined;
+    !forbidDeploymentFallback && !credential && billingEnabled
+      ? await hostedModelCreditObserver(deps.prisma, scope)
+      : undefined;
   return { ...material, apiKey: material.apiKey ?? runtimeKey, callObserver };
 }
 
@@ -196,7 +224,10 @@ async function resolveModelKeyMaterial(
   provider: string,
   modelId: string,
   registerSecrets?: (values: string[]) => void,
-  { requireStoredSecret = false }: { requireStoredSecret?: boolean } = {},
+  {
+    requireStoredSecret = false,
+    forbidDeploymentFallback = false,
+  }: { requireStoredSecret?: boolean; forbidDeploymentFallback?: boolean } = {},
 ): Promise<{
   apiKey?: string;
   accountId?: string;
@@ -231,6 +262,8 @@ async function resolveModelKeyMaterial(
         where: { id: credential.secretId, userId, spaceId: null },
       });
       if (!row) {
+        if (forbidDeploymentFallback)
+          throw new UnavailableModelForAuthError(MISSING_MODEL_RUN_ERROR);
         if (await modelCreditBillingEnabled(deps))
           throw new Error("Connect that model provider again.");
         if (requireStoredSecret) throw new Error("Backup model credential is no longer available");
@@ -354,6 +387,7 @@ async function resolveModelKeyMaterial(
       };
     });
   }
+  if (forbidDeploymentFallback) throw new UnavailableModelForAuthError(MISSING_MODEL_RUN_ERROR);
   if (requireStoredSecret) throw new Error("Backup model credential is no longer available");
   cloudflareProviderEnv({ provider });
   return { apiKey: deploymentKeyFor(deps, provider), redact: [] };
@@ -404,13 +438,17 @@ export async function resolveConnectedModelKey(
   requireStoredSecret = false,
   credentialId?: string,
 ) {
-  const hostedProvider = (await modelCreditBillingEnabled(deps))
-    ? resolveDeploymentModel().provider
-    : undefined;
+  const credentials = await runModelCredentialScope(deps.prisma, scope);
+  const credentialScope = { userId: credentials.userId, spaceId: credentials.spaceId };
+  const forbidDeploymentFallback = credentials.forbidDeploymentFallback;
+  const hostedProvider =
+    !forbidDeploymentFallback && (await modelCreditBillingEnabled(deps))
+      ? resolveDeploymentModel().provider
+      : undefined;
   const validationError = await validateConnectedModelChoice(
     deps.prisma,
     deps.secretStore,
-    scope,
+    credentialScope,
     provider,
     modelId,
     { hostedProvider, credentialId, codexCatalog: deps.codexCatalog },
@@ -419,7 +457,7 @@ export async function resolveConnectedModelKey(
   const credential = await findConnectedModelCredential(
     deps.prisma,
     deps.secretStore,
-    scope,
+    credentialScope,
     provider,
     modelId,
     { credentialId },
@@ -427,13 +465,13 @@ export async function resolveConnectedModelKey(
   if (!credential && provider !== hostedProvider) throw new Error(PINNED_PROVIDER_NOT_CONNECTED);
   const resolved = await resolveModelKey(
     deps,
-    scope.userId,
-    scope.spaceId,
+    credentialScope.userId,
+    credentialScope.spaceId,
     credential,
     provider,
     modelId,
     registerSecrets,
-    { requireStoredSecret },
+    { requireStoredSecret: requireStoredSecret || forbidDeploymentFallback, forbidDeploymentFallback },
   );
   return { credential, resolved };
 }
@@ -481,7 +519,10 @@ export async function resolveRunModel(
     botId?: string;
   },
 ): Promise<AgentRunRequest["model"]> {
-  // The bot's model is shared config; the credential that runs it stays the run user's.
+  // The bot's model is shared config; guests run on the space owner's stored connection.
+  const credentials = await runModelCredentialScope(deps.prisma, scope);
+  const credentialScope = { userId: credentials.userId, spaceId: credentials.spaceId };
+  const forbidDeploymentFallback = credentials.forbidDeploymentFallback;
   const override = scope.botId
     ? await deps.prisma.bot.findFirst({
         where: { id: scope.botId, spaceId: scope.spaceId },
@@ -494,12 +535,12 @@ export async function resolveRunModel(
       ? findConnectedModelCredential(
           deps.prisma,
           deps.secretStore,
-          scope,
+          credentialScope,
           override!.modelProvider!,
           override!.modelId,
         )
       : Promise.resolve(null),
-    resolveMemberMainModel(deps, scope),
+    resolveMemberMainModel(deps, credentialScope),
     deps.prisma.deploymentSettings.findUnique({
       where: { id: "default" },
     }),
@@ -508,17 +549,21 @@ export async function resolveRunModel(
     override,
     overrideCredential,
     main,
-    hostedProvider: (await modelCreditBillingEnabled(deps))
-      ? resolveDeploymentModel().provider
-      : undefined,
+    hostedProvider:
+      !forbidDeploymentFallback && (await modelCreditBillingEnabled(deps))
+        ? resolveDeploymentModel().provider
+        : undefined,
     defaults: {
       settings,
-      deployment: deps.deploymentModelConfigured ? resolveDeploymentModel() : null,
+      deployment:
+        !forbidDeploymentFallback && deps.deploymentModelConfigured
+          ? resolveDeploymentModel()
+          : null,
     },
   });
   const { credential, thinkingLevel } = selected;
   let { provider, id } = selected;
-  if (!provider || !id) {
+  if (!forbidDeploymentFallback && (!provider || !id)) {
     const runtimeFallback = runtimeFallbackModel(deps.runtime);
     provider ??= runtimeFallback?.provider;
     id ??= runtimeFallback?.id ?? null;
@@ -527,11 +572,13 @@ export async function resolveRunModel(
   // The key is resolved for the provider that won above, not before it is known.
   const resolved = await resolveModelKey(
     deps,
-    scope.userId,
-    scope.spaceId,
+    credentialScope.userId,
+    credentialScope.spaceId,
     credential,
     provider,
     id,
+    undefined,
+    { forbidDeploymentFallback, requireStoredSecret: forbidDeploymentFallback },
   );
   return {
     provider,

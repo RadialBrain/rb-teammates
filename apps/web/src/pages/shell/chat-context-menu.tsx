@@ -72,6 +72,7 @@ export function ChatContextMenu({
   group,
   sections,
   spaceId,
+  canManageBots = true,
   onClose,
   refreshBots,
   read,
@@ -85,6 +86,7 @@ export function ChatContextMenu({
   group: Group | undefined;
   sections: BotSection[];
   spaceId: string | undefined;
+  canManageBots?: boolean;
   onClose: () => void;
   refreshBots: (includeArchived?: boolean) => Promise<void>;
   read: Pick<ChatRead, "markBotRead" | "markBotUnread" | "toggleGroupUnread">;
@@ -102,6 +104,7 @@ export function ChatContextMenu({
     <BotContextMenu
       bot={chat}
       onClose={onClose}
+      canManageBots={canManageBots}
       sections={sections}
       onTogglePinned={() => {
         onClose();

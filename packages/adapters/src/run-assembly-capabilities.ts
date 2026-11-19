@@ -114,13 +114,18 @@ export async function startTurnModel(
 ) {
   const { deps, run, runId, workerId, fence, attempt, secrets: runSecrets } = hold;
   const { pinnedComputerFailure, pinnedComputerModels } = parts.saved;
-  const { bot, main, modelChoice, overrideCredential, settings } = parts.records;
-  const runDeployment = deps.deploymentModelConfigured ? resolveDeploymentModel() : null;
-  const runtimeFallback = runtimeFallbackModel(deps.runtime);
+  const { bot, main, modelChoice, overrideCredential, settings, forbidDeploymentFallback } =
+    parts.records;
+  const runDeployment =
+    !forbidDeploymentFallback && deps.deploymentModelConfigured ? resolveDeploymentModel() : null;
+  const runtimeFallback = forbidDeploymentFallback
+    ? null
+    : runtimeFallbackModel(deps.runtime);
   const pinError =
     !pinnedComputerModels &&
     run.modelPinned &&
     !(
+      !forbidDeploymentFallback &&
       (await modelCreditBillingEnabled(deps)) &&
       modelChoice.modelProvider === runDeployment?.provider
     )
@@ -137,9 +142,10 @@ export async function startTurnModel(
         override: modelChoice,
         overrideCredential,
         main,
-        hostedProvider: (await modelCreditBillingEnabled(deps))
-          ? resolveDeploymentModel().provider
-          : undefined,
+        hostedProvider:
+          !forbidDeploymentFallback && (await modelCreditBillingEnabled(deps))
+            ? resolveDeploymentModel().provider
+            : undefined,
         defaults: { settings, deployment: runDeployment },
       });
   const selectedProvider = selected.provider ?? runtimeFallback?.provider;

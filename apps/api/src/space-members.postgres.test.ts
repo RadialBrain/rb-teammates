@@ -689,6 +689,7 @@ describePostgres("shared spaces: invites and membership (PostgreSQL)", () => {
       shared: false,
       isDefault: true,
       canRename: true,
+      canManageBots: true,
     });
     expect(spaces.find((space) => space.id === home)).toMatchObject({
       name: "Home",
@@ -696,6 +697,7 @@ describePostgres("shared spaces: invites and membership (PostgreSQL)", () => {
       isDefault: false,
       canRename: false,
       canDelete: false,
+      canManageBots: false,
     });
     // From inside the shared Space, the member still sees their own Spaces around it, and the
     // owner's organization stays out of their switcher.
@@ -724,6 +726,21 @@ describePostgres("shared spaces: invites and membership (PostgreSQL)", () => {
     await expect(
       system.space.findUniqueOrThrow({ where: { id: created.json.id as string } }),
     ).resolves.toMatchObject({ organizationId: invitee.organizationId });
+  });
+
+  it("forbids guests from creating bots in a shared space while chat routes stay open", async () => {
+    const owner = await person("owner");
+    const invitee = await person("invitee");
+    const home = await sharedSpace(owner, "Home");
+    await call(invitee.actor, "spaces/invites/accept", { token: await invite(owner, home) });
+    const guest = inSpace(invitee.actor, home);
+
+    const created = await call(guest, "bots/create", { name: "Guest Bot" });
+    expect(created.status).toBe(403);
+    expect(String(created.json.message ?? created.json)).toMatch(/Guests can chat|FORBIDDEN/i);
+
+    const listed = await call(guest, "bots/list", {});
+    expect(listed.status).toBe(200);
   });
 
   it("deletes an owner's shared spaces with the account and hands a leaving member's bots over", async () => {

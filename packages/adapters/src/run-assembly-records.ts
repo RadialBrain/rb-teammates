@@ -34,6 +34,7 @@ import { LEGACY_HISTORY_WINDOW_SIZE } from "./history-compaction.js";
 import { resolveMemberMainModel } from "./model-roles.js";
 import { findConnectedModelCredential, runModelChoice } from "./model-selection.js";
 import { restoreComputerModels } from "./pi-runtime-computer-mode.js";
+import { runModelCredentialScope } from "./run-model.js";
 import {
   mergeConnectedPlugins,
   needsLivePluginSync,
@@ -140,6 +141,11 @@ export async function loadRunRecords(
   // so the run reads only the message that woke it and gets no history tools.
   const unknownChannelSourceId =
     messagingChannelRun && !channelId ? messagingSource?.id : undefined;
+  const modelCredentials = await runModelCredentialScope(deps.prisma, run);
+  const modelCredentialScope = {
+    userId: modelCredentials.userId,
+    spaceId: modelCredentials.spaceId,
+  };
   const [
     { bot, ownerLabs },
     thread,
@@ -205,7 +211,9 @@ export async function loadRunRecords(
         status: true,
       },
     }),
-    pinnedComputerModels ? Promise.resolve(null) : resolveMemberMainModel(deps, run),
+    pinnedComputerModels
+      ? Promise.resolve(null)
+      : resolveMemberMainModel(deps, modelCredentialScope),
     deps.prisma.deploymentSettings.findUnique({
       where: { id: "default" },
     }),
@@ -275,7 +283,7 @@ export async function loadRunRecords(
       ? await findConnectedModelCredential(
           deps.prisma,
           deps.secretStore,
-          run,
+          modelCredentialScope,
           modelChoice.modelProvider,
           modelChoice.modelId,
         )
@@ -295,6 +303,7 @@ export async function loadRunRecords(
     task,
     storedConnections,
     main,
+    forbidDeploymentFallback: modelCredentials.forbidDeploymentFallback,
     settings,
     configuredMemory,
     savedSkills,

@@ -80,6 +80,7 @@ export function BotSettings({
   onClose,
   computer,
   routines,
+  canManageBots = true,
   onSave,
   onExport,
   onClear,
@@ -91,6 +92,8 @@ export function BotSettings({
   onClose?: () => void;
   computer?: ReactNode;
   routines?: Omit<ComponentProps<typeof RoutineList>, "preview">;
+  /** Space Invite guests may view settings but not change them. */
+  canManageBots?: boolean;
   focusModel?: number;
   onSave: (patch: {
     name?: string;
@@ -480,6 +483,7 @@ export function BotSettings({
     dailyCheckIns?: boolean;
     disabledBuiltinTools?: string[];
   }) {
+    if (!canManageBots) return;
     // Serialize full-object auto-saves so an older in-flight request cannot
     // finish after a newer one and clobber fields. Always call through a ref so
     // queued work reads the latest field values, not a stale render closure.
@@ -589,6 +593,7 @@ export function BotSettings({
               status={bot.status}
               size={76}
               avatarSet={avatarSet}
+              disabled={!canManageBots}
               onChange={(newColor, nextAvatarSet) => {
                 setColor(newColor);
                 if (nextAvatarSet !== undefined) setAvatarSet(nextAvatarSet);
@@ -605,6 +610,7 @@ export function BotSettings({
             value={name}
             maxLength={BOT_NAME_MAX_LENGTH}
             className="text-heading2 font-semibold"
+            readOnly={!canManageBots}
             onCommit={(value) => {
               if (!value.trim()) return;
               setName(value.trim());
@@ -642,7 +648,7 @@ export function BotSettings({
                 )
               }
               action={
-                routineCount > 0 ? (
+                canManageBots && routineCount > 0 ? (
                   <Button
                     variant="ghost"
                     size="icon-xs"
@@ -690,18 +696,23 @@ export function BotSettings({
                 choices={modelChoices}
                 value={selectedModelKey}
                 onModelChange={(key) => {
+                  if (!canManageBots) return;
                   setModelKey(key);
                   setThinkingLevel("");
                 }}
                 thinkingOptions={thinkingOptions}
                 thinkingLevel={thinkingLevel}
                 defaultThinkingLevel={defaultThinkingLevel}
-                onThinkingLevelChange={setThinkingLevel}
+                onThinkingLevelChange={(level) => {
+                  if (!canManageBots) return;
+                  setThinkingLevel(level);
+                }}
               />
               <SwitchRow
                 id={`${ids}-notify-finish`}
                 label={<Trans>Notifications</Trans>}
                 checked={notifyOnFinish}
+                disabled={!canManageBots}
                 onChange={(checked) => {
                   setNotifyOnFinish(checked);
                   void enqueueSave({ notifyOnFinish: checked });
@@ -711,7 +722,7 @@ export function BotSettings({
                 id={`${ids}-own-computer`}
                 label={<Trans>Own computer</Trans>}
                 checked={computerMode === "dedicated"}
-                disabled={saving}
+                disabled={saving || !canManageBots}
                 onChange={(checked) => setComputerMode(checked ? "dedicated" : "team")}
               />
               {changed.readAloud ? (
@@ -719,6 +730,7 @@ export function BotSettings({
                   id={`${ids}-auto-speak`}
                   label={<Trans>Read replies aloud</Trans>}
                   checked={autoSpeak}
+                  disabled={!canManageBots}
                   onChange={setAutoSpeak}
                 />
               ) : null}
@@ -727,7 +739,10 @@ export function BotSettings({
                   ids={ids}
                   voices={voices}
                   voiceId={voiceId}
-                  onVoiceIdChange={setVoiceId}
+                  onVoiceIdChange={(next) => {
+                    if (!canManageBots) return;
+                    setVoiceId(next);
+                  }}
                 />
               ) : null}
               {changed.dailyCheckIns ? (
@@ -735,7 +750,7 @@ export function BotSettings({
                   id={`${ids}-daily-check-ins`}
                   label={<Trans>Daily check-ins on unfinished work</Trans>}
                   checked={dailyCheckIns}
-                  disabled={saving}
+                  disabled={saving || !canManageBots}
                   onChange={(checked) => {
                     setDailyCheckIns(checked);
                     void enqueueSave({ dailyCheckIns: checked });
@@ -747,7 +762,7 @@ export function BotSettings({
                   id={`${ids}-cross-space`}
                   label={<Trans>Allow cross-space bot communication</Trans>}
                   checked={crossSpaceCommunication}
-                  disabled={saving}
+                  disabled={saving || !canManageBots}
                   onChange={(checked) => {
                     setCrossSpaceCommunication(checked);
                     void enqueueSave({ crossSpaceCommunication: checked });
@@ -759,7 +774,7 @@ export function BotSettings({
                   id={`${ids}-fleet-management`}
                   label={<Trans>Manage other bots</Trans>}
                   checked={fleetManagement}
-                  disabled={saving}
+                  disabled={saving || !canManageBots}
                   onChange={(checked) => {
                     setFleetManagement(checked);
                     void enqueueSave({ fleetManagement: checked });
@@ -767,7 +782,7 @@ export function BotSettings({
                 />
               ) : null}
             </SettingsCard>
-            <InstructionSettings key={bot.id} bot={bot} />
+            <InstructionSettings key={bot.id} bot={bot} readOnly={!canManageBots} />
             <ErrorBoundary fallback={<SectionLoadFailed />}>
               <Suspense fallback={null}>
                 <KnowledgeSection botId={bot.id} />
@@ -776,10 +791,13 @@ export function BotSettings({
             <DescriptionGroup
               ids={ids}
               description={description}
-              onDescriptionChange={setDescription}
+              onDescriptionChange={(next) => {
+                if (!canManageBots) return;
+                setDescription(next);
+              }}
               onCommit={() => void enqueueSave()}
             />
-            {changed.tools ? (
+            {changed.tools && canManageBots ? (
               <ToolsGroup
                 ids={ids}
                 disabledBuiltinTools={disabledBuiltinTools}
@@ -812,6 +830,7 @@ function InlineProfileField({
   value,
   maxLength,
   className,
+  readOnly = false,
   onCommit,
 }: {
   label: string;
@@ -819,6 +838,7 @@ function InlineProfileField({
   value: string;
   maxLength: number;
   className: string;
+  readOnly?: boolean;
   onCommit: (value: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -828,6 +848,13 @@ function InlineProfileField({
     if (cancelled.current) return;
     setEditing(false);
     if (draft.trim() !== value.trim()) onCommit(draft);
+  }
+  if (readOnly) {
+    return (
+      <span className={`min-w-0 max-w-full break-words px-2 ${className}`} aria-label={label}>
+        {value}
+      </span>
+    );
   }
   return editing ? (
     <Input

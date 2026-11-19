@@ -117,7 +117,7 @@ export const BotAvatar = memo(function BotAvatar({
     return (
       <FlatLetterAvatar
         color={colorDef.hex}
-        label={label || identity}
+        label={label ?? identity}
         size={size}
         isWorking={isWorking}
         className={className}
@@ -272,8 +272,8 @@ function LiveLogoAvatar({
   return <LogoAvatar {...props} activity={activity} />;
 }
 
-function avatarLetter(label: string): string {
-  const trimmed = label.trim();
+function avatarLetter(label: unknown): string {
+  const trimmed = String(label ?? "").trim();
   const match = trimmed.match(/[\p{L}\p{N}]/u);
   return (match?.[0] ?? "T").toUpperCase();
 }
@@ -286,7 +286,7 @@ function FlatLetterAvatar({
   className,
 }: {
   color: string;
-  label: string;
+  label: unknown;
   size: number;
   isWorking: boolean;
   className?: string;

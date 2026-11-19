@@ -92,6 +92,7 @@ export function spacesRoutes(ctx: RouterContext) {
             hasContent: false,
             canRename: true,
             canDelete: true,
+            canManageBots: true,
             botCount: 0,
             bots: [],
             groups: [],
@@ -366,6 +367,7 @@ async function memberSpaceNavigation(
     select: {
       spaceId: true,
       role: true,
+      member: { select: { role: true } },
       space: {
         select: {
           name: true,
@@ -457,6 +459,7 @@ async function memberSpaceNavigation(
         shared: membership.space._count.memberships > 1,
         hasGuests: withGuests.has(membership.spaceId),
         botCount: botCounts.get(membership.spaceId) ?? 0,
+        canManageBots: membership.member.role !== GUEST_ROLE,
         canRename: owner && membership.space.deletingAt === null,
         canDelete:
           owner &&

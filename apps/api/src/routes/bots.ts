@@ -50,6 +50,7 @@ import {
 import { ACTIVE_RUN_STATUSES, ClientError, computerUsingRuns, displayName } from "@rakazo/core";
 import type { Prisma } from "@rakazo/db";
 import {
+  assertCanManageBots,
   botProfileLabelsChanged,
   commitBotUpdate,
   expireComputerExecutionLeases,
@@ -339,6 +340,7 @@ export function botsRoutes(ctx: RouterContext) {
         return found;
       }),
       create: authed.bots.create.handler(async ({ context, input }) => {
+        await assertCanManageBots(deps.prisma, context.actor);
         // Older apps always send Original, which would pin every new bot to it.
         const { avatarSet: _ignored, ...request } = input;
         const bot = await repos.createBot(context.actor, request);
@@ -351,9 +353,10 @@ export function botsRoutes(ctx: RouterContext) {
         previewAgentImport(agentImportServices as AgentImportServices, context.actor, input),
       ),
       // An imported bot starts inert: no intro run, paused routines, unapproved servers.
-      importCreate: authed.bots.importCreate.handler(async ({ context, input }) =>
-        createImportedBot(agentImportServices, context.actor, input, context.signal),
-      ),
+      importCreate: authed.bots.importCreate.handler(async ({ context, input }) => {
+        await assertCanManageBots(deps.prisma, context.actor);
+        return createImportedBot(agentImportServices, context.actor, input, context.signal);
+      }),
       importSetupState: authed.bots.importSetupState.handler(async ({ context, input }) =>
         agentImportSetupState(agentImportServices as AgentImportServices, context.actor, input),
       ),
@@ -361,16 +364,18 @@ export function botsRoutes(ctx: RouterContext) {
         listBotTemplates(agentImportServices, context.actor),
       ),
       // Like an import, the bot starts inert: no intro run, and its routines are paused.
-      createFromTemplate: authed.bots.createFromTemplate.handler(async ({ context, input }) =>
-        createBotFromTemplate(
+      createFromTemplate: authed.bots.createFromTemplate.handler(async ({ context, input }) => {
+        await assertCanManageBots(deps.prisma, context.actor);
+        return createBotFromTemplate(
           agentImportServices,
           () => managedAppCatalog(deps.connectors, context.actor, "bots.createFromTemplate"),
           context.actor,
           input,
           context.signal,
-        ),
-      ),
+        );
+      }),
       duplicate: authed.bots.duplicate.handler(async ({ context, input }) => {
+        await assertCanManageBots(deps.prisma, context.actor);
         const source = await repos.getBot(context.actor, input.botId);
         const duplicate = await repos.createBot(context.actor, {
           name: duplicateBotName(source.name),
@@ -410,10 +415,12 @@ export function botsRoutes(ctx: RouterContext) {
         return duplicate;
       }),
       reorder: authed.bots.reorder.handler(async ({ context, input }) => {
+        await assertCanManageBots(deps.prisma, context.actor);
         await repos.reorderBots(context.actor, input.botIds);
         return { ok: true as const };
       }),
       update: authed.bots.update.handler(async ({ context, input }) => {
+        await assertCanManageBots(deps.prisma, context.actor);
         const existing = await repos.getBot(context.actor, input.botId);
         if (input.sectionId) {
           const section = await deps.prisma.botSection.findFirst({
@@ -597,6 +604,7 @@ export function botsRoutes(ctx: RouterContext) {
         }
       }),
       archive: authed.bots.archive.handler(async ({ context, input }) => {
+        await assertCanManageBots(deps.prisma, context.actor);
         const bot = await repos.getBot(context.actor, input.botId, { includeArchived: true });
         await archiveBot(
           {
@@ -614,6 +622,7 @@ export function botsRoutes(ctx: RouterContext) {
         return { ok: true as const };
       }),
       restore: authed.bots.restore.handler(async ({ context, input }) => {
+        await assertCanManageBots(deps.prisma, context.actor);
         const bot = await repos.getBot(context.actor, input.botId, { includeArchived: true });
         if (!bot.archivedAt) return { ok: true as const };
         if (bot.computer) {
@@ -629,12 +638,14 @@ export function botsRoutes(ctx: RouterContext) {
         return { ok: true as const };
       }),
       remove: authed.bots.remove.handler(async ({ context, input }) => {
+        await assertCanManageBots(deps.prisma, context.actor);
         const result = await removeBot(context.actor, input.botId, {
           deleteMemories: input.deleteMemories,
         });
         return { ok: true as const, ...result };
       }),
       removePreview: authed.bots.removePreview.handler(async ({ context, input }) => {
+        await assertCanManageBots(deps.prisma, context.actor);
         const bot = await loadBotForRemoval(deps.prisma, repos, context.actor, input.botId);
         return groupsRemovedByDeletingBot(deps.prisma, bot.id);
       }),
@@ -733,9 +744,10 @@ export function botsRoutes(ctx: RouterContext) {
       }),
     },
     groups: {
-      create: authed.groups.create.handler(async ({ context, input }) =>
-        groupRepos.createGroup(context.actor, input),
-      ),
+      create: authed.groups.create.handler(async ({ context, input }) => {
+        await assertCanManageBots(deps.prisma, context.actor);
+        return groupRepos.createGroup(context.actor, input);
+      }),
       list: authed.groups.list.handler(async ({ context }) => groupRepos.listGroups(context.actor)),
       listArchived: authed.groups.listArchived.handler(async ({ context }) =>
         groupRepos.listGroups(context.actor, { archived: true }),
@@ -755,6 +767,7 @@ export function botsRoutes(ctx: RouterContext) {
         };
       }),
       duplicate: authed.groups.duplicate.handler(async ({ context, input }) => {
+        await assertCanManageBots(deps.prisma, context.actor);
         const source = await groupRepos.getGroup(context.actor, input.groupId);
         return groupRepos.createGroup(context.actor, {
           name: duplicateBotName(source.name),
@@ -762,6 +775,7 @@ export function botsRoutes(ctx: RouterContext) {
         });
       }),
       update: authed.groups.update.handler(async ({ context, input }) => {
+        await assertCanManageBots(deps.prisma, context.actor);
         if (input.sectionId) {
           const section = await deps.prisma.botSection.findFirst({
             where: {
@@ -777,15 +791,18 @@ export function botsRoutes(ctx: RouterContext) {
         return updated.group;
       }),
       archive: authed.groups.archive.handler(async ({ context, input }) => {
+        await assertCanManageBots(deps.prisma, context.actor);
         const archived = await groupRepos.archiveGroup(context.actor, input.groupId);
         await stopCancelledGroupRuns(deps, context.actor, archived);
         return { ok: true as const };
       }),
       restore: authed.groups.restore.handler(async ({ context, input }) => {
+        await assertCanManageBots(deps.prisma, context.actor);
         await groupRepos.restoreGroup(context.actor, input.groupId);
         return { ok: true as const };
       }),
       remove: authed.groups.remove.handler(async ({ context, input }) => {
+        await assertCanManageBots(deps.prisma, context.actor);
         const removed = await groupRepos.removeGroup(context.actor, input.groupId);
         try {
           await stopCancelledGroupRuns(deps, context.actor, removed);
@@ -828,15 +845,18 @@ export function botsRoutes(ctx: RouterContext) {
       list: authed.botSections.list.handler(async ({ context }) =>
         repos.listBotSections(context.actor),
       ),
-      create: authed.botSections.create.handler(async ({ context, input }) =>
-        repos.createBotSection(context.actor, input),
-      ),
-      update: authed.botSections.update.handler(async ({ context, input }) =>
-        repos.updateBotSection(context.actor, input),
-      ),
-      remove: authed.botSections.remove.handler(async ({ context, input }) =>
-        repos.deleteBotSection(context.actor, input),
-      ),
+      create: authed.botSections.create.handler(async ({ context, input }) => {
+        await assertCanManageBots(deps.prisma, context.actor);
+        return repos.createBotSection(context.actor, input);
+      }),
+      update: authed.botSections.update.handler(async ({ context, input }) => {
+        await assertCanManageBots(deps.prisma, context.actor);
+        return repos.updateBotSection(context.actor, input);
+      }),
+      remove: authed.botSections.remove.handler(async ({ context, input }) => {
+        await assertCanManageBots(deps.prisma, context.actor);
+        return repos.deleteBotSection(context.actor, input);
+      }),
     },
     agentSecrets: {
       list: authed.agentSecrets.list.handler(async ({ context }) =>

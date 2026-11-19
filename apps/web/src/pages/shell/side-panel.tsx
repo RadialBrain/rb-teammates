@@ -23,6 +23,7 @@ export function ShellSidePanel({
   activeGroup,
   bots,
   groups,
+  canManageBots = true,
   setBots,
   setGroups,
   navigate,
@@ -45,6 +46,7 @@ export function ShellSidePanel({
   activeGroup: Group | undefined;
   bots: Bot[];
   groups: Group[];
+  canManageBots?: boolean;
   setBots: Dispatch<SetStateAction<Bot[]>>;
   setGroups: Dispatch<SetStateAction<Group[]>>;
   navigate: (path: string, options?: { replace?: boolean }) => void;
@@ -102,7 +104,7 @@ export function ShellSidePanel({
               </div>
             </div>
           ) : null}
-          {panel === "create-group" ? (
+          {panel === "create-group" && canManageBots ? (
             <CreateGroupForm
               bots={bots}
               onCancel={() => setPanel(null)}
@@ -120,6 +122,7 @@ export function ShellSidePanel({
               bots={bots}
               pages={<PagesList groupId={activeGroup.id} />}
               onSave={async (input) => {
+                if (!canManageBots) return;
                 const updated = await rpc.groups.update({ groupId: activeGroup.id, ...input });
                 setGroups((current) =>
                   current.map((group) => (group.id === updated.id ? updated : group)),
@@ -129,6 +132,7 @@ export function ShellSidePanel({
                 );
               }}
               onRemove={async () => {
+                if (!canManageBots) return;
                 await rpc.groups.remove({ groupId: activeGroup.id });
                 discardChatAttachments(activeGroup.id);
                 const remainingGroups = groups.filter((group) => group.id !== activeGroup.id);
@@ -142,7 +146,7 @@ export function ShellSidePanel({
               covered={computerOpen}
             />
           ) : null}
-          {panel === "import-agent" ? (
+          {panel === "import-agent" && canManageBots ? (
             <AgentImportForm
               onClose={() => setPanel(null)}
               onCreated={(bot) => {
@@ -160,6 +164,7 @@ export function ShellSidePanel({
               onClose={() => setPanel(null)}
               computer={computerPanel}
               routines={routineList}
+              canManageBots={canManageBots}
               focusModel={modelFocusRequest}
               onSave={async ({ computerMode, ...patch }) => {
                 if (computerMode !== undefined && computerMode !== active.computerMode) {

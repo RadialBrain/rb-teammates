@@ -69,6 +69,7 @@ export function ShellSidebar({
   search,
   bots,
   groups,
+  canManageBots = true,
   collapsedSidebarSections,
   toggleSidebarSection,
   setPanel,
@@ -99,6 +100,7 @@ export function ShellSidebar({
   search: SidebarSearch;
   bots: Bot[];
   groups: Group[];
+  canManageBots?: boolean;
   collapsedSidebarSections: ReadonlySet<string>;
   toggleSidebarSection: (key: string) => void;
   setPanel: (panel: Panel) => void;
@@ -189,6 +191,7 @@ export function ShellSidebar({
           }}
           setBotsSidebarCollapsedPref={setCollapsedPref}
           bots={bots}
+          canManageBots={canManageBots}
           setMobileSidebarOpen={setMobileOpen}
           setPanel={setPanel}
           navigate={navigate}

@@ -252,6 +252,8 @@ function SpaceShell() {
   const [botMenu, setBotMenu] = useState<ChatMenuTarget | null>(null);
   const closeBotMenu = useCallback(() => setBotMenu(null), []);
   const currentSpaceId = selectedSpaceId() ?? bootstrapMe?.spaceId ?? null;
+  const currentSpace = spaces.find((space) => space.id === currentSpaceId) ?? null;
+  const canManageBots = currentSpace?.canManageBots !== false;
   // null: settings follow the space the app is showing.
   const settingsSpaceId = overlay?.kind === "settings" ? overlay.spaceId : null;
   const settingsSpace =
@@ -565,6 +567,7 @@ function SpaceShell() {
                 hasContent: true,
                 canRename: false,
                 canDelete: false,
+                canManageBots: true,
                 bots,
                 groups,
                 botSections,
@@ -937,7 +940,8 @@ function SpaceShell() {
         bot={contextBot}
         group={contextGroup}
         sections={botSections}
-        spaceId={bootstrapMe?.spaceId}
+        spaceId={currentSpaceId ?? bootstrapMe?.spaceId}
+        canManageBots={canManageBots}
         onClose={closeBotMenu}
         refreshBots={refreshBots}
         read={read}
@@ -990,6 +994,7 @@ function SpaceShell() {
         search={search}
         bots={bots}
         groups={groups}
+        canManageBots={canManageBots}
         collapsedSidebarSections={collapsedSidebarSections}
         toggleSidebarSection={toggleSidebarSection}
         setPanel={setPanel}
@@ -1281,6 +1286,7 @@ function SpaceShell() {
         activeGroup={activeGroup}
         bots={bots}
         groups={groups}
+        canManageBots={canManageBots}
         setBots={setBots}
         setGroups={setGroups}
         navigate={navigate}

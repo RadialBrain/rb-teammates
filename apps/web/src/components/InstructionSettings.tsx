@@ -11,7 +11,7 @@ import { errorText } from "../lib/user-error";
 
 type Change = { kind: "edit" } | { kind: "restore"; versionId: string } | { kind: "reload" };
 
-export function InstructionSettings({ bot }: { bot: Bot }) {
+export function InstructionSettings({ bot, readOnly = false }: { bot: Bot; readOnly?: boolean }) {
   const { t } = useLingui();
   const queries = useSpaceQueries();
   const id = useId();
@@ -60,7 +60,7 @@ export function InstructionSettings({ bot }: { bot: Bot }) {
         >
           <Trans>Instructions</Trans>
         </label>
-        {current.instructionHistory?.length ? (
+        {!readOnly && current.instructionHistory?.length ? (
           <Popover>
             <PopoverTrigger
               render={
@@ -105,9 +105,11 @@ export function InstructionSettings({ bot }: { bot: Bot }) {
         className="min-h-20 max-h-96 resize-none field-sizing-content"
         value={instructions}
         maxLength={BOT_INSTRUCTIONS_MAX_LENGTH}
-        disabled={pending}
+        disabled={pending || readOnly}
+        readOnly={readOnly}
         onChange={(event) => setInstructions(event.target.value)}
         onBlur={() => {
+          if (readOnly) return;
           if (!conflict && instructions !== current.instructions) change.run({ kind: "edit" });
         }}
       />

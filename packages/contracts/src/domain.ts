@@ -375,6 +375,8 @@ export const SpaceSchema = z.object({
   canRename: z.boolean().optional(),
   /** True only when the current member may delete this non-default space. */
   canDelete: z.boolean().optional(),
+  /** False for Space Invite guests — they may chat but not create or edit bots. */
+  canManageBots: z.boolean().optional(),
   /** True when more than one person belongs to the space. */
   shared: z.boolean().optional(),
   /** True when someone from outside the Space's organization belongs to it. */

@@ -15,12 +15,15 @@ import { IconTooltip } from "../../components/IconTooltip";
 
 export function BotCreatePicker({
   bots,
+  canManageBots = true,
   onCreateBot,
   onOpenBot,
   onCreateGroup,
   onCreateSpace,
 }: {
   bots: Bot[];
+  /** Space Invite guests chat only — hide New bot / New group. */
+  canManageBots?: boolean;
   onCreateBot: () => void;
   onOpenBot: (botId: string) => void;
   onCreateGroup: () => void;
@@ -61,7 +64,7 @@ export function BotCreatePicker({
             <Trans>No bots match</Trans>
           </CommandEmpty>
           <CommandGroup className="shrink-0">
-            {showCreate ? (
+            {canManageBots && showCreate ? (
               <CommandItem
                 value="create-new-bot"
                 data-testid="create-new-bot"
@@ -74,17 +77,19 @@ export function BotCreatePicker({
                 <Trans>New bot</Trans>
               </CommandItem>
             ) : null}
-            <CommandItem
-              value="create-group"
-              data-testid="create-new-group"
-              onSelect={() => onCreateGroup()}
-              className="gap-2"
-            >
-              <span className="flex size-[22px] shrink-0 items-center justify-center">
-                <Users size={16} strokeWidth={1.8} aria-hidden="true" />
-              </span>
-              <Trans>New group chat</Trans>
-            </CommandItem>
+            {canManageBots ? (
+              <CommandItem
+                value="create-group"
+                data-testid="create-new-group"
+                onSelect={() => onCreateGroup()}
+                className="gap-2"
+              >
+                <span className="flex size-[22px] shrink-0 items-center justify-center">
+                  <Users size={16} strokeWidth={1.8} aria-hidden="true" />
+                </span>
+                <Trans>New group chat</Trans>
+              </CommandItem>
+            ) : null}
             <CommandItem
               value="create-space"
               data-testid="create-new-space"
