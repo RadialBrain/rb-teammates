@@ -19,16 +19,16 @@ import {
   savedCompatibleModelIds,
 } from "@rakazo/core";
 import { useMemo, useRef, useState } from "react";
-import type { ModelCatalogEntry } from "../../lib/model-auth";
-import type { ModelPreflightFailure } from "../../lib/model-connection-preflight";
+import type { ModelCatalogEntry } from "../../lib/models/model-auth";
+import type { ModelPreflightFailure } from "../../lib/models/model-connection-preflight";
 import {
   classifyModelConnectionFailure,
   modelPreflightSuccessMessage,
   runModelConnectionPreflight,
   unavailableSelectedModel,
-} from "../../lib/model-connection-preflight";
-import type { RpcClient } from "../../lib/rpc";
-import { errorText } from "../../lib/user-error";
+} from "../../lib/models/model-connection-preflight";
+import type { RpcClient } from "../../lib/query/rpc";
+import { errorText } from "../../lib/query/user-error";
 
 type PreflightOutcome = { success: string } | { failure: ModelPreflightFailure };
 
@@ -58,6 +58,7 @@ export function useModelConnectionForm({
   const [gatewayId, setGatewayId] = useState("");
   const [projectId, setProjectId] = useState("");
   const [region, setRegion] = useState("global");
+  const [zeroDataRetention, setZeroDataRetention] = useState(false);
   const [baseUrl, setBaseUrl] = useState("");
   const [apiProtocol, setApiProtocol] = useState<ModelApiProtocol>("chat-completions");
   const [headerRows, setHeaderRows] = useState<ModelHeaderRow[] | null>(null);
@@ -100,6 +101,7 @@ export function useModelConnectionForm({
     setGatewayId(fields.gatewayId);
     setProjectId(fields.projectId ?? "");
     setRegion(fields.region ?? "global");
+    setZeroDataRetention(fields.zeroDataRetention ?? false);
   }
 
   function invalidatePreflight() {
@@ -280,6 +282,7 @@ export function useModelConnectionForm({
     setGatewayId,
     setProjectId,
     setRegion,
+    setZeroDataRetention,
     setHeaderRows,
     setModelId,
     setNotice,
@@ -290,5 +293,6 @@ export function useModelConnectionForm({
     updateApiKey,
     updateApiProtocol,
     updateBaseUrl,
+    zeroDataRetention,
   };
 }

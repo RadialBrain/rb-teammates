@@ -18,6 +18,7 @@ import {
   connectionFormModelId,
   connectionModels,
   createModelProbe,
+  dataRetentionDirty,
   initialModelProbeState,
   modelConnectionFormSecrets,
   modelConnectRequest,
@@ -31,7 +32,6 @@ import {
   ActivityIndicator,
   Alert,
   Keyboard,
-  Linking,
   Pressable,
   ScrollView,
   Text,
@@ -39,22 +39,24 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { CompatibleEndpointForm } from "../../components/compatible-endpoint-form";
-import { ConnectionModelList } from "../../components/connection-model-list";
-import { DisclosureRow } from "../../components/model-connection-fields";
-import { createModelsStyles } from "../../components/model-connection-styles";
-import { NativeActionButton } from "../../components/native-action-button";
-import type { MobileMe, MobileModel, MobileModelCredential } from "../../lib/mobile-types";
+import { CompatibleEndpointForm } from "../../components/models/compatible-endpoint-form";
+import { ConnectionModelList } from "../../components/models/connection-model-list";
+import { DisclosureRow } from "../../components/models/model-connection-fields";
+import { createModelsStyles } from "../../components/models/model-connection-styles";
+import { NativeActionButton } from "../../components/native/native-action-button";
+import { SettingsGroup, SettingsSwitch } from "../../components/settings/settings-group";
+import type { MobileMe, MobileModel, MobileModelCredential } from "../../lib/api/mobile-types";
+import { errorText } from "../../lib/api/user-error";
+import { useSubscriptionSignIn } from "../../lib/auth/use-subscription-sign-in";
 import {
   MODEL_CONNECT_TIMEOUT_MS,
   modelConnectionRequest,
-} from "../../lib/model-connection-request";
-import { native, useThemedStyles } from "../../lib/native";
-import { useScreenHeader } from "../../lib/screen-header";
-import { ACCOUNT_SETTINGS, settingsRpc } from "../../lib/settings-target";
-import { useListSearch } from "../../lib/use-list-search";
-import { useSubscriptionSignIn } from "../../lib/use-subscription-sign-in";
-import { errorText } from "../../lib/user-error";
+} from "../../lib/models/model-connection-request";
+import { analyticsSurface } from "../../lib/native/analytics-surface";
+import { native, useThemedStyles } from "../../lib/native/native";
+import { useScreenHeader } from "../../lib/navigation/screen-header";
+import { ACCOUNT_SETTINGS, settingsRpc } from "../../lib/query/settings-target";
+import { useListSearch } from "../../lib/search/use-list-search";
 
 type ModelSelection = {
   modelId?: string;
@@ -90,6 +92,7 @@ export default function ModelConnection() {
   const [gatewayId, setGatewayId] = useState("");
   const [projectId, setProjectId] = useState("");
   const [region, setRegion] = useState("global");
+  const [zeroDataRetention, setZeroDataRetention] = useState(false);
   const [baseUrl, setBaseUrl] = useState("");
   const [apiProtocol, setApiProtocol] = useState<ModelApiProtocol>("chat-completions");
   const [headerRows, setHeaderRows] = useState<ModelHeaderRow[] | null>(null);
@@ -172,6 +175,7 @@ export default function ModelConnection() {
       setGatewayId(fields.gatewayId);
       setProjectId(fields.projectId ?? "");
       setRegion(fields.region ?? "global");
+      setZeroDataRetention(fields.zeroDataRetention ?? false);
       return nextMe;
     },
     [request, rpc, t],
@@ -194,6 +198,7 @@ export default function ModelConnection() {
     copyOAuthCode,
     cancelOAuth,
     cancelSignIn,
+    openSignInPage,
     startSubscriptionSignIn,
     submitOAuthCode,
   } = useSubscriptionSignIn({
@@ -289,8 +294,11 @@ export default function ModelConnection() {
     credential,
     keyRequired: Boolean(endpointPreset),
   });
-  const gatewayDirty = modelRoutingDirty({ accountId, gatewayId, projectId, region }, credential);
-  const gatewayOnlySave = needsRouting && Boolean(credential) && !apiKey.trim();
+  const retentionDirty =
+    selected !== undefined && dataRetentionDirty(selected, zeroDataRetention, credential);
+  const gatewayDirty =
+    modelRoutingDirty({ accountId, gatewayId, projectId, region }, credential) || retentionDirty;
+  const gatewayOnlySave = (needsRouting || retentionDirty) && Boolean(credential) && !apiKey.trim();
 
   function updateBaseUrl(nextBaseUrl: string) {
     setBaseUrl(nextBaseUrl);
@@ -396,6 +404,7 @@ export default function ModelConnection() {
         gatewayId,
         projectId,
         region,
+        zeroDataRetention,
       },
       selected,
       credential,
@@ -408,9 +417,11 @@ export default function ModelConnection() {
     const { savingWithoutKey, activeModelId } = connect;
     setPending("connect");
     try {
-      const saved = await rpc("models/connect", connect.input, {
-        timeoutMs: MODEL_CONNECT_TIMEOUT_MS,
-      });
+      const saved = await rpc(
+        "models/connect",
+        { ...connect.input, surface: analyticsSurface() },
+        { timeoutMs: MODEL_CONNECT_TIMEOUT_MS },
+      );
       adoptSavedCredential(saved);
       credentialIdRef.current = saved.id;
       setCredentialId(saved.id);
@@ -578,7 +589,7 @@ export default function ModelConnection() {
               {oauth.mode === "auth-url" ? (
                 <>
                   <Text style={styles.secondary}>{t`Finish signing in in your browser:`}</Text>
-                  <Pressable onPress={() => void Linking.openURL(oauth.verificationUri)}>
+                  <Pressable onPress={() => void openSignInPage(oauth.verificationUri)}>
                     <Text style={styles.link}>{oauth.verificationUri}</Text>
                   </Pressable>
                   <Text style={styles.secondary}>{t`Then paste the code here.`}</Text>
@@ -607,7 +618,7 @@ export default function ModelConnection() {
                   <Text style={styles.secondary}>
                     {t`A sign-in page opened — enter this code there:`}
                   </Text>
-                  <Pressable onPress={() => void Linking.openURL(oauth.verificationUri)}>
+                  <Pressable onPress={() => void openSignInPage(oauth.verificationUri)}>
                     <Text style={styles.link}>{oauth.verificationUri}</Text>
                   </Pressable>
                   <Text style={styles.code}>{oauth.userCode}</Text>
@@ -711,6 +722,19 @@ export default function ModelConnection() {
                   value={apiKey}
                 />
               </>
+            ) : null}
+            {selected.dataRetentionControl ? (
+              <SettingsGroup>
+                <SettingsSwitch
+                  label={t`Zero data retention`}
+                  value={zeroDataRetention}
+                  disabled={busy}
+                  onChange={(value) => {
+                    setZeroDataRetention(value);
+                    clearFeedback();
+                  }}
+                />
+              </SettingsGroup>
             ) : null}
 
             <NativeActionButton

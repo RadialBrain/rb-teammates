@@ -13,6 +13,7 @@ import {
   compatibleModelRows,
   connectionFormFields,
   connectionFormModelId,
+  dataRetentionDirty,
   modelConnectRequest,
   popularModelProvidersFirst,
   savedCompatibleModelIds,
@@ -21,12 +22,13 @@ import { fetchFresh } from "@rakazo/core/query";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useCopyText } from "../../lib/copy-text";
-import { providerDisplayName } from "../../lib/localized-provider-hint";
-import type { ModelCatalogEntry } from "../../lib/model-auth";
-import { useSpaceQueries } from "../../lib/query";
-import { useSpaceRpc } from "../../lib/space-rpc";
-import { useModelOAuthSignIn } from "../../lib/use-model-oauth-signin";
-import { errorText } from "../../lib/user-error";
+import { providerDisplayName } from "../../lib/models/localized-provider-hint";
+import type { ModelCatalogEntry } from "../../lib/models/model-auth";
+import { useModelOAuthSignIn } from "../../lib/models/use-model-oauth-signin";
+import { analyticsSurface } from "../../lib/platform/desktop";
+import { useSpaceQueries } from "../../lib/query/query";
+import { useSpaceRpc } from "../../lib/query/space-rpc";
+import { errorText } from "../../lib/query/user-error";
 import { useModelConnectionForm } from "./use-model-connection-form";
 
 const NO_CATALOG: ModelCatalogEntry[] = [];
@@ -109,8 +111,9 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
     setProvider,
     setThinkingLevel,
     thinkingLevel,
+    zeroDataRetention,
   } = form;
-  const [codeCopied, copyOAuthCode] = useCopyText();
+  const [codeCopied, copyText] = useCopyText();
   const [loading, setLoading] = useState(
     () =>
       queryClient.getQueryData(catalogQuery.queryKey) === undefined ||
@@ -131,6 +134,7 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
     oauthPending,
     popupBlocked,
     cancelOAuthAttempt,
+    reportSignInStep,
     startSubscriptionSignIn,
     submitOAuthCode,
   } = useModelOAuthSignIn({
@@ -145,6 +149,12 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
       if (started) await started.intent?.onConnected?.({ ...started.choice, credentialId });
     },
   });
+  const copyOAuthCode = (code: string) => {
+    const loginId = oauth?.loginId;
+    void copyText(code).then((copied) => {
+      if (copied) reportSignInStep("code_copied", loginId);
+    });
+  };
 
   /**
    * `keepForm` reloads the lists without resetting the open connection's fields. Every refresh but
@@ -296,12 +306,12 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
     probeModels,
   );
   const defaultModelOptions = [...new Set([...enabledModelIds, modelId])];
-  // Saved-connection settings edited without a new key (gateway ids).
+  // Saved-connection settings edited without a new key (gateway ids, data retention).
   const settingsDirty =
     !isOpenAiCompatible &&
     Boolean(credential) &&
-    needsRouting &&
-    modelRoutingDirty({ accountId, gatewayId, projectId, region }, credential);
+    ((needsRouting && modelRoutingDirty({ accountId, gatewayId, projectId, region }, credential)) ||
+      (selected !== undefined && dataRetentionDirty(selected, zeroDataRetention, credential)));
 
   /** Opens a connection (by id) or a new one (null) for the provider. */
   function chooseProvider(
@@ -354,6 +364,7 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
         gatewayId,
         projectId,
         region,
+        zeroDataRetention,
       },
       selected,
       credential,
@@ -371,7 +382,7 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
     const form = formRevisionRef.current;
     const stillSelected = () => form === formRevisionRef.current;
     try {
-      const saved = await rpc.models.connect(input);
+      const saved = await rpc.models.connect({ ...input, surface: analyticsSurface() });
       if (!stillSelected()) {
         await refresh({ keepForm: true });
         return;
@@ -459,6 +470,7 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
     confirmDisconnect,
     connectKey,
     copyOAuthCode,
+    reportSignInStep,
     credential,
     credentialByProvider,
     credentials,

@@ -1,6 +1,6 @@
 import { Trans } from "@lingui/react/macro";
 import { Button } from "@rakazo/ui-web";
-import { rpc } from "../../lib/rpc";
+import { rpc } from "../../lib/query/rpc";
 
 const FIRST_BOT_NAME = "Chief";
 const FIRST_BOT_COLOR = "#6E5AFF";

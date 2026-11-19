@@ -1,11 +1,11 @@
 import { Plural, Trans, useLingui } from "@lingui/react/macro";
-import { Button, Disclosure, Input } from "@rakazo/ui-web";
+import { Button, Disclosure, Input, Label, Switch } from "@rakazo/ui-web";
 import { Check, Copy } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   ModelPreflightFeedback,
   modelPreflightTestingLabel,
-} from "../../components/ModelConnectionPreflightNotice";
+} from "../../components/models/ModelConnectionPreflightNotice";
 import { CompatibleKeyField } from "./compatible-key-field";
 
 import type { ModelSettingsState } from "./use-model-settings";
@@ -21,6 +21,7 @@ export function ConnectionControls({
   codeCopied,
   connectKey,
   copyOAuthCode,
+  reportSignInStep,
   credential,
   gatewayId,
   projectId,
@@ -44,10 +45,12 @@ export function ConnectionControls({
   setProjectId,
   setRegion,
   setPasteCode,
+  setZeroDataRetention,
   submitOAuthCode,
   subscriptionSignIn,
   testApiKeyConnection,
   updateApiKey,
+  zeroDataRetention,
 }: Pick<
   ModelSettingsState,
   | "acceptsKey"
@@ -60,6 +63,7 @@ export function ConnectionControls({
   | "codeCopied"
   | "connectKey"
   | "copyOAuthCode"
+  | "reportSignInStep"
   | "credential"
   | "gatewayId"
   | "projectId"
@@ -83,10 +87,12 @@ export function ConnectionControls({
   | "setProjectId"
   | "setRegion"
   | "setPasteCode"
+  | "setZeroDataRetention"
   | "submitOAuthCode"
   | "subscriptionSignIn"
   | "testApiKeyConnection"
   | "updateApiKey"
+  | "zeroDataRetention"
 >) {
   const { t } = useLingui();
   // Signed in with a subscription, a key is an alternative, so it stays folded until asked for.
@@ -112,6 +118,7 @@ export function ConnectionControls({
                       Sign in at{" "}
                       <a
                         href={oauth.verificationUri}
+                        onClick={() => reportSignInStep("page_opened")}
                         target="_blank"
                         rel="noreferrer"
                         className="text-foreground underline"
@@ -156,6 +163,7 @@ export function ConnectionControls({
                         Open{" "}
                         <a
                           href={oauth.verificationUri}
+                          onClick={() => reportSignInStep("page_opened")}
                           target="_blank"
                           rel="noreferrer"
                           className="text-foreground underline"
@@ -169,6 +177,7 @@ export function ConnectionControls({
                         A sign-in tab opened at{" "}
                         <a
                           href={oauth.verificationUri}
+                          onClick={() => reportSignInStep("page_opened")}
                           target="_blank"
                           rel="noreferrer"
                           className="text-foreground underline"
@@ -260,7 +269,8 @@ export function ConnectionControls({
                   }
                   autoComplete="off"
                   spellCheck={false}
-                  className="mt-2 h-10 text-foreground"
+                  size="lg"
+                  className="mt-2 text-foreground"
                 />
               </label>
               {needsGateway || needsProject ? (
@@ -277,7 +287,8 @@ export function ConnectionControls({
                     }
                     autoComplete="off"
                     spellCheck={false}
-                    className="mt-2 h-10 text-foreground"
+                    size="lg"
+                    className="mt-2 text-foreground"
                   />
                 </label>
               ) : null}
@@ -302,9 +313,23 @@ export function ConnectionControls({
                 placeholder={credential?.hasKey ? t`Paste a replacement key` : "sk-…"}
                 type="password"
                 autoComplete="new-password"
-                className="mt-2 h-10 text-foreground"
+                size="lg"
+                className="mt-2 text-foreground"
               />
             </label>
+          ) : null}
+          {selected?.dataRetentionControl ? (
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <Label htmlFor="model-zero-data-retention" className="text-body font-normal">
+                <Trans>Zero data retention</Trans>
+              </Label>
+              <Switch
+                id="model-zero-data-retention"
+                checked={zeroDataRetention}
+                disabled={busy}
+                onCheckedChange={setZeroDataRetention}
+              />
+            </div>
           ) : null}
           <div className="mt-3 flex flex-wrap items-center gap-2">
             {acceptsKey && selected?.catalogProbe ? (
@@ -395,7 +420,8 @@ export function CompatibleKeyControls({
           }
           type="password"
           autoComplete="new-password"
-          className="mt-2 h-10 text-foreground"
+          size="lg"
+          className="mt-2 text-foreground"
         />
       </CompatibleKeyField>
       <Button
